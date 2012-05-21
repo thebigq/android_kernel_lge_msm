@@ -1144,12 +1144,16 @@ static struct i2c_driver aat28xx_driver __refdata = {
 static int __init aat28xx_init(void)
 {
 	printk("AAT28XX init start\n");
+	printk("Requesting GPIO-101\n");
+	gpio_request(101, "aat2870_bl");
 	return i2c_add_driver(&aat28xx_driver);
 }
 
 static void __exit aat28xx_exit(void)
 {
 	i2c_del_driver(&aat28xx_driver);
+	printk("Freeing GPIO-101\n");
+	gpio_free(101);
 }
 
 module_init(aat28xx_init);

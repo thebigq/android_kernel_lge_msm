@@ -369,6 +369,8 @@ static int __init android_vibrator_init(void)
 		printk(KERN_WARNING "vibrator: failed to create the singlethread wq\n");
 	}
 #endif
+	printk("Requesting GPIO-28\n");
+	gpio_request(28, "android_vibrator");
 	return platform_driver_register(&android_vibrator_driver);
 }
 
@@ -381,7 +383,8 @@ static void __exit android_vibrator_exit(void)
 	if (vibrator_wq)
 		destroy_workqueue(vibrator_wq);
 #endif
-
+	printk("Freeing GPIO-28\n");
+	gpio_free(28);
 }
 
 module_init(android_vibrator_init);
