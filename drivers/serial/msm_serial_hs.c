@@ -682,7 +682,14 @@ unsigned int msm_hs_tx_empty(struct uart_port *uport)
 {
 	unsigned int data;
 	unsigned int ret = 0;
-	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+	struct msm_hs_port *msm_uport;
+
+	if (uport == NULL) {
+		printk(KERN_ERR "BUG: msm_hs_tx_empty: uport is NULL\n");
+		return 0;
+	}
+
+	msm_uport = UARTDM_TO_MSM(uport);
 
 	clk_enable(msm_uport->clk);
 
