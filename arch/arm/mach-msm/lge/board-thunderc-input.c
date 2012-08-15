@@ -26,6 +26,8 @@
 // LGE_CHANGE [dojip.kim@lge.com] 2010-07-18, check the pcb revision
 #include <mach/board_lge.h>
 
+#include <mach/socinfo.h>
+
 #include "board-thunderc.h"
 
 static int prox_power_set(unsigned char onoff);
@@ -44,41 +46,15 @@ static struct platform_device hs_device = {
 	},
 };
 
-/* None qwerty keypad device
- * For Thunder CDMA Keypad  [ youngchul.park@lge.com ]
- * gpio key pad device - from keypad-surf-ffa */
-/* LGE_CHANGE [LS670:FW:james.jang@lge.com] 2010-05-05, add keys. 
- * CAM_SHOT, CAM_AF, VOICE 
- */
-#if defined(CONFIG_MACH_MSM7X27_THUNDERC_SPRINT)
-static unsigned int keypad_row_gpios[] = {
-	32, 33, 34
-};
-#else
-static unsigned int keypad_row_gpios[] = {
-	32, 33
-};
-#endif
-
-static unsigned int keypad_col_gpios[] = {38, 37,36};
+static unsigned int keypad_col_gpios[] = { 38, 37, 36 };
 
 #define KEYMAP_INDEX(row, col) ((row)*ARRAY_SIZE(keypad_col_gpios) + (col))
 
-/* LGE_CHANGE [LS670:FW:james.jang@lge.com] 2010-05-05, add keys. 
- * CAM_SHOT, CAM_AF, VOICE 
- */
-/* LGE_CHANGE [dojip.kim@lge.com] 2010--05-15, modified the keymap
- * BACK <-> HOME
- */
-#if defined(CONFIG_MACH_MSM7X27_THUNDERC_SPRINT)
-static const unsigned short keypad_keymap_thunder[9] = {
-#if defined(CONFIG_MACH_MSM7X27_THUNDERC_SPRINT_VM)
-	[KEYMAP_INDEX(0, 0)] = KEY_MENU,
-	[KEYMAP_INDEX(0, 1)] = KEY_HOME,
-#else
+/* Sprint LS670 */
+static unsigned int keypad_row_gpios_LS670[] = { 32, 33, 34 };
+static const unsigned short keypad_keymap_thunder_LS670[9] = {
 	[KEYMAP_INDEX(0, 0)] = KEY_HOME,
 	[KEYMAP_INDEX(0, 1)] = KEY_MENU,
-#endif
 	[KEYMAP_INDEX(0, 2)] = KEY_VOLUMEUP,
 	[KEYMAP_INDEX(1, 0)] = KEY_SEARCH,
 	[KEYMAP_INDEX(1, 1)] = KEY_BACK,
@@ -87,20 +63,22 @@ static const unsigned short keypad_keymap_thunder[9] = {
 	[KEYMAP_INDEX(2, 1)] = KEY_FOCUS,
 	[KEYMAP_INDEX(2, 2)] = KEY_CHAT,
 };
-#else
-/* change key map for H/W Rev.B -> Rev.C  2010-06-13 younchan,kim
-	[Rev.B key map]
-static const unsigned short keypad_keymap_thunder[6] = {
-	[KEYMAP_INDEX(0, 0)] = KEY_BACK,
-	[KEYMAP_INDEX(0, 1)] = KEY_MENU,
+/* Virgin Mobile VM670 */
+static unsigned int keypad_row_gpios_VM670[] = { 32, 33, 34 };
+static const unsigned short keypad_keymap_thunder_VM670[9] = {
+	[KEYMAP_INDEX(0, 0)] = KEY_MENU,
+	[KEYMAP_INDEX(0, 1)] = KEY_HOME,
 	[KEYMAP_INDEX(0, 2)] = KEY_VOLUMEUP,
 	[KEYMAP_INDEX(1, 0)] = KEY_SEARCH,
-	[KEYMAP_INDEX(1, 1)] = KEY_HOME,
+	[KEYMAP_INDEX(1, 1)] = KEY_BACK,
 	[KEYMAP_INDEX(1, 2)] = KEY_VOLUMEDOWN,
+	[KEYMAP_INDEX(2, 0)] = KEY_CAMERA,
+	[KEYMAP_INDEX(2, 1)] = KEY_FOCUS,
+	[KEYMAP_INDEX(2, 2)] = KEY_CHAT,
 };
-*/
-/* add Rev.C key map 2010-05-13 younchan.kim */
-static const unsigned short keypad_keymap_thunder[6] = {
+/* Verizon VS660 */
+static unsigned int keypad_row_gpios_VS660[] = { 32, 33 };
+static const unsigned short keypad_keymap_thunder_VS660[6] = {
 	[KEYMAP_INDEX(0, 0)] = KEY_MENU,
 	[KEYMAP_INDEX(0, 1)] = KEY_HOME,
 	[KEYMAP_INDEX(0, 2)] = KEY_VOLUMEUP,
@@ -108,17 +86,36 @@ static const unsigned short keypad_keymap_thunder[6] = {
 	[KEYMAP_INDEX(1, 1)] = KEY_BACK,
 	[KEYMAP_INDEX(1, 2)] = KEY_VOLUMEDOWN,
 };
-#endif
+
 static struct gpio_event_matrix_info thunder_keypad_matrix_info = {
 	.info.func	= gpio_event_matrix_func,
-	.keymap		= keypad_keymap_thunder,
-	.output_gpios	= keypad_row_gpios,
-	.input_gpios	= keypad_col_gpios,
-	.noutputs	= ARRAY_SIZE(keypad_row_gpios),
+	.keymap		= NULL,	/* Filled in by lge_add_input_devices() */
+	.input_gpios	= (unsigned int*)keypad_col_gpios,
+	.output_gpios	= NULL,	/* Filled in by lge_add_input_devices() */
 	.ninputs	= ARRAY_SIZE(keypad_col_gpios),
+	.noutputs	= 0,	/* Filled in by lge_add_input_devices() */
 	.settle_time.tv.nsec = 40 * NSEC_PER_USEC,
 	.poll_time.tv.nsec = 20 * NSEC_PER_MSEC,
 	.flags		= GPIOKPF_LEVEL_TRIGGERED_IRQ | GPIOKPF_PRINT_UNMAPPED_KEYS | GPIOKPF_DRIVE_INACTIVE
+};
+
+struct keypad_matrix_mapping {
+	const char*		model;
+	const unsigned short*	keymap;
+	unsigned int*		output_gpios;
+	unsigned int		noutputs;
+};
+static struct keypad_matrix_mapping thunder_keypad_matrix_mapping[] = {
+	{ "LS670", keypad_keymap_thunder_LS670,
+		keypad_row_gpios_LS670,
+		ARRAY_SIZE(keypad_row_gpios_LS670) },
+	{ "VM670", keypad_keymap_thunder_VM670,
+		keypad_row_gpios_VM670,
+		ARRAY_SIZE(keypad_row_gpios_VM670) },
+	{ "VS660", keypad_keymap_thunder_VS660,
+		keypad_row_gpios_VS660,
+		ARRAY_SIZE(keypad_row_gpios_VS660) },
+	{ NULL, NULL, NULL, 0 }
 };
 
 static struct gpio_event_info *thunder_keypad_info[] = {
@@ -533,6 +530,20 @@ static void __init thunderc_init_i2c_prox_ecom(int bus_num)
 /* common function */
 void __init lge_add_input_devices(void)
 {
+	const char* model;
+	struct keypad_matrix_mapping* mapent;
+
+	model = socinfo_get_model();
+	printk(KERN_INFO "lge_add_input_devices: model=%s\n", model);
+	for (mapent = thunder_keypad_matrix_mapping; mapent->model; ++mapent) {
+		if (!strcmp(model, mapent->model)) {
+			break;
+		}
+	}
+	BUG_ON(mapent->model == NULL);
+	thunder_keypad_matrix_info.keymap = mapent->keymap;
+	thunder_keypad_matrix_info.output_gpios = mapent->output_gpios;
+	thunder_keypad_matrix_info.noutputs = mapent->noutputs;
 
 	platform_add_devices(thunder_input_devices, ARRAY_SIZE(thunder_input_devices));
 
